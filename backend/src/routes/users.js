@@ -1,11 +1,11 @@
 const router = require('express').Router();
-const { getAllUsers, updateUser, deleteUser } = require('../controllers/userController');
+const { getAll, update, remove } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/auth');
 
-router.use(protect, authorize('admin'));
+router.use(protect, authorize('ADMIN'));
 
-router.get('/', getAllUsers);
-router.put('/:id', updateUser);
-router.delete('/:id', deleteUser);
+router.get('/',       getAll);
+router.put('/:id',    update);
+router.delete('/:id', remove);
 
 module.exports = router;

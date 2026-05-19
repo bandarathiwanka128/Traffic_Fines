@@ -1,33 +1,33 @@
-const { supabaseAnon, supabaseAdmin } = require('../config/supabase');
+const jwt = require('jsonwebtoken');
+const { supabaseAdmin } = require('../config/supabase');
 
 exports.protect = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer '))
     return res.status(401).json({ message: 'Not authorized' });
+
+  try {
+    const token = auth.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('id, full_name, email, role, district, phone')
+      .eq('id', decoded.id)
+      .single();
+
+    if (error || !user)
+      return res.status(401).json({ message: 'User not found' });
+
+    req.user = user;
+    next();
+  } catch {
+    res.status(401).json({ message: 'Token invalid or expired' });
   }
-
-  const token = authHeader.split(' ')[1];
-
-  // Verify the Supabase JWT and get the authenticated user
-  const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
-  if (error || !user) {
-    return res.status(401).json({ message: 'Token invalid or expired' });
-  }
-
-  // Fetch the profile (role) from our profiles table
-  const { data: profile } = await supabaseAdmin
-    .from('profiles')
-    .select('name, role')
-    .eq('id', user.id)
-    .single();
-
-  req.user = { id: user.id, email: user.email, ...profile };
-  next();
 };
 
 exports.authorize = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
+  if (!roles.includes(req.user.role))
     return res.status(403).json({ message: 'Access denied' });
-  }
   next();
 };

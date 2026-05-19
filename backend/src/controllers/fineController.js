@@ -2,17 +2,22 @@ const { supabaseAdmin } = require('../config/supabase');
 
 exports.getAllFines = async (req, res) => {
   try {
-    const { status, plate, page = 1, limit = 10 } = req.query;
+    const { status, vehicle_number, district, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin
-      .from('fines')
-      .select('*, profiles(name, email)', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .from('traffic_fines')
+      .select(`
+        *,
+        fine_categories(category_name, amount),
+        users(full_name, district)
+      `, { count: 'exact' })
+      .order('issued_date', { ascending: false })
       .range(offset, offset + Number(limit) - 1);
 
-    if (status) query = query.eq('status', status);
-    if (plate) query = query.ilike('vehicle_plate', `%${plate}%`);
+    if (status)         query = query.eq('status', status);
+    if (vehicle_number) query = query.ilike('vehicle_number', `%${vehicle_number}%`);
+    if (district)       query = query.eq('district', district);
 
     const { data: fines, count, error } = await query;
     if (error) return res.status(500).json({ message: error.message });
@@ -26,8 +31,8 @@ exports.getAllFines = async (req, res) => {
 exports.getFineById = async (req, res) => {
   try {
     const { data: fine, error } = await supabaseAdmin
-      .from('fines')
-      .select('*, profiles(name, email)')
+      .from('traffic_fines')
+      .select(`*, fine_categories(category_name, amount), users(full_name, district)`)
       .eq('id', req.params.id)
       .single();
 
@@ -40,9 +45,25 @@ exports.getFineById = async (req, res) => {
 
 exports.createFine = async (req, res) => {
   try {
+    const {
+      vehicle_number, driver_name, driver_license,
+      category_id, district, fine_reference
+    } = req.body;
+
+    const ref = fine_reference || `TF-${Date.now()}`;
+
     const { data: fine, error } = await supabaseAdmin
-      .from('fines')
-      .insert({ ...req.body, issued_by: req.user.id })
+      .from('traffic_fines')
+      .insert({
+        fine_reference: ref,
+        vehicle_number,
+        driver_name,
+        driver_license,
+        category_id,
+        district,
+        police_officer_id: req.user.id,
+        status: 'PENDING',
+      })
       .select()
       .single();
 
@@ -56,8 +77,8 @@ exports.createFine = async (req, res) => {
 exports.updateFine = async (req, res) => {
   try {
     const { data: fine, error } = await supabaseAdmin
-      .from('fines')
-      .update({ ...req.body, updated_at: new Date().toISOString() })
+      .from('traffic_fines')
+      .update(req.body)
       .eq('id', req.params.id)
       .select()
       .single();
@@ -69,35 +90,10 @@ exports.updateFine = async (req, res) => {
   }
 };
 
-exports.payFine = async (req, res) => {
-  try {
-    const { data: existing } = await supabaseAdmin
-      .from('fines')
-      .select('status')
-      .eq('id', req.params.id)
-      .single();
-
-    if (!existing) return res.status(404).json({ message: 'Fine not found' });
-    if (existing.status === 'paid') return res.status(400).json({ message: 'Fine already paid' });
-
-    const { data: fine, error } = await supabaseAdmin
-      .from('fines')
-      .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', req.params.id)
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(fine);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 exports.deleteFine = async (req, res) => {
   try {
     const { error } = await supabaseAdmin
-      .from('fines')
+      .from('traffic_fines')
       .delete()
       .eq('id', req.params.id);
 
@@ -110,14 +106,13 @@ exports.deleteFine = async (req, res) => {
 
 exports.getStats = async (req, res) => {
   try {
-    const { count: total } = await supabaseAdmin.from('fines').select('*', { count: 'exact', head: true });
-    const { count: paid }  = await supabaseAdmin.from('fines').select('*', { count: 'exact', head: true }).eq('status', 'paid');
-    const { count: unpaid } = await supabaseAdmin.from('fines').select('*', { count: 'exact', head: true }).eq('status', 'unpaid');
-    const { count: disputed } = await supabaseAdmin.from('fines').select('*', { count: 'exact', head: true }).eq('status', 'disputed');
-    const { data: revenueRows } = await supabaseAdmin.from('fines').select('amount').eq('status', 'paid');
-    const revenue = (revenueRows || []).reduce((sum, r) => sum + Number(r.amount), 0);
+    const { count: total }   = await supabaseAdmin.from('traffic_fines').select('*', { count: 'exact', head: true });
+    const { count: pending } = await supabaseAdmin.from('traffic_fines').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
+    const { count: paid }    = await supabaseAdmin.from('traffic_fines').select('*', { count: 'exact', head: true }).eq('status', 'PAID');
+    const { data: revenue }  = await supabaseAdmin.from('payments').select('amount').eq('payment_status', 'SUCCESS');
+    const totalRevenue = (revenue || []).reduce((sum, p) => sum + Number(p.amount), 0);
 
-    res.json({ total, paid, unpaid, disputed, revenue });
+    res.json({ total, pending, paid, totalRevenue });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
