@@ -1,0 +1,5 @@
+.fine-form { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 13px; font-weight: 600; color: #374151; }
+textarea { resize: vertical; }
