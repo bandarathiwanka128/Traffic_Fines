@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const submit = async (event) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.identifier, form.password);
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -27,25 +27,36 @@ export default function Login() {
   return (
     <div className="auth-wrapper">
       <div className="auth-card card">
-        <h1 className="auth-title">Traffic Fine System</h1>
-        <p className="auth-subtitle">Sign in to your account</p>
-        <form onSubmit={handleSubmit} className="auth-form">
+        <div className="government-mark">SRI LANKA POLICE</div>
+        <h1 className="auth-title">Traffic Fine Portal</h1>
+        <p className="auth-subtitle">Authorized officers and administrators</p>
+        <form onSubmit={submit} className="auth-form">
           <div className="form-group">
-            <label>Email</label>
-            <input type="email" value={form.email} required
-              onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <label>Username or email</label>
+            <input
+              value={form.identifier}
+              required
+              autoComplete="username"
+              onChange={(event) => setForm({ ...form, identifier: event.target.value })}
+              placeholder="admin"
+            />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input type="password" value={form.password} required
-              onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <input
+              type="password"
+              value={form.password}
+              required
+              autoComplete="current-password"
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+            />
           </div>
           {error && <p className="error-msg">{error}</p>}
           <button type="submit" className="btn-primary auth-btn" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p className="auth-link">Don't have an account? <Link to="/register">Register</Link></p>
+        <p className="auth-link"><Link to="/pay">Pay a traffic fine</Link></p>
       </div>
     </div>
   );

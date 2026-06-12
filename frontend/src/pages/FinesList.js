@@ -3,102 +3,80 @@ import { Link, useNavigate } from 'react-router-dom';
 import { finesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const money = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK')}`;
+
 export default function FinesList() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [data, setData] = useState({ fines: [], total: 0, pages: 1 });
-  const [filters, setFilters] = useState({ status: '', plate: '', page: 1 });
+  const [filters, setFilters] = useState({ status: '', vehicle_number: '', page: 1 });
   const [loading, setLoading] = useState(true);
 
-  const fetchFines = async () => {
+  useEffect(() => {
     setLoading(true);
-    try {
-      const res = await finesAPI.getAll(filters);
-      setData(res.data);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const timer = setTimeout(() => {
+      finesAPI.getAll(filters)
+        .then(({ data: result }) => setData(result))
+        .finally(() => setLoading(false));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
-  useEffect(() => { fetchFines(); }, [filters]);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this fine?')) return;
+  const remove = async (id) => {
+    if (!window.confirm('Delete this fine permanently?')) return;
     await finesAPI.delete(id);
-    fetchFines();
-  };
-
-  const handlePay = async (id) => {
-    await finesAPI.pay(id);
-    fetchFines();
+    setData({ ...data, fines: data.fines.filter((fine) => fine.id !== id) });
   };
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 className="page-title" style={{ margin: 0 }}>Traffic Fines</h1>
-        {(user?.role === 'admin' || user?.role === 'officer') && (
-          <button className="btn-primary" onClick={() => navigate('/fines/new')}>+ New Fine</button>
-        )}
+      <div className="page-heading">
+        <div><h1 className="page-title">Traffic fines</h1><p className="muted">{data.total} records</p></div>
+        <button className="btn-primary" onClick={() => navigate('/fines/new')}>Issue new fine</button>
       </div>
-
-      <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 12 }}>
-        <input placeholder="Search plate..." value={filters.plate}
-          onChange={(e) => setFilters({ ...filters, plate: e.target.value, page: 1 })} style={{ maxWidth: 200 }} />
-        <select value={filters.status} style={{ maxWidth: 160 }}
-          onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}>
-          <option value="">All Status</option>
-          <option value="unpaid">Unpaid</option>
-          <option value="paid">Paid</option>
-          <option value="disputed">Disputed</option>
+      <div className="card filters">
+        <input
+          placeholder="Search vehicle number"
+          value={filters.vehicle_number}
+          onChange={(event) => setFilters({ ...filters, vehicle_number: event.target.value, page: 1 })}
+        />
+        <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value, page: 1 })}>
+          <option value="">All statuses</option>
+          <option value="PENDING">Pending</option>
+          <option value="PAID">Paid</option>
         </select>
       </div>
-
-      <div className="card">
-        {loading ? <p>Loading...</p> : (
+      <div className="card table-card">
+        {loading ? <p>Loading fines...</p> : (
           <>
-            <table>
-              <thead>
-                <tr><th>Plate</th><th>Owner</th><th>Violation</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {data.fines.map((f) => (
-                  <tr key={f._id}>
-                    <td><Link to={`/fines/${f._id}`} style={{ color: '#4f46e5', fontWeight: 600 }}>{f.vehiclePlate}</Link></td>
-                    <td>{f.ownerName}</td>
-                    <td>{f.violation}</td>
-                    <td>${f.amount}</td>
-                    <td>{new Date(f.dueDate).toLocaleDateString()}</td>
-                    <td><span className={`badge badge-${f.status}`}>{f.status}</span></td>
-                    <td style={{ display: 'flex', gap: 6 }}>
-                      {f.status !== 'paid' && (
-                        <button className="btn-success" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => handlePay(f._id)}>Pay</button>
-                      )}
-                      {(user?.role === 'admin' || user?.role === 'officer') && (
-                        <button className="btn-outline" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => navigate(`/fines/${f._id}/edit`)}>Edit</button>
-                      )}
-                      {user?.role === 'admin' && (
-                        <button className="btn-danger" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => handleDelete(f._id)}>Del</button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {data.fines.length === 0 && (
-                  <tr><td colSpan={7} style={{ textAlign: 'center', color: '#9ca3af' }}>No fines found</td></tr>
-                )}
-              </tbody>
-            </table>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: '#6b7280' }}>Total: {data.total} fines</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn-outline" style={{ padding: '4px 12px' }}
-                  disabled={filters.page === 1}
-                  onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>Prev</button>
-                <span style={{ alignSelf: 'center', fontSize: 13 }}>Page {filters.page} of {data.pages}</span>
-                <button className="btn-outline" style={{ padding: '4px 12px' }}
-                  disabled={filters.page >= data.pages}
-                  onClick={() => setFilters({ ...filters, page: filters.page + 1 })}>Next</button>
-              </div>
+            <div className="table-scroll">
+              <table>
+                <thead><tr><th>Reference</th><th>Vehicle</th><th>Driver</th><th>Category</th><th>Amount</th><th>District</th><th>Status</th><th /></tr></thead>
+                <tbody>
+                  {data.fines.map((fine) => (
+                    <tr key={fine.id}>
+                      <td><Link className="table-link" to={`/fines/${fine.id}`}>{fine.fine_reference}</Link></td>
+                      <td>{fine.vehicle_number}</td>
+                      <td>{fine.driver_name || '-'}</td>
+                      <td>{fine.fine_categories?.category_name}</td>
+                      <td>{money(fine.fine_categories?.amount)}</td>
+                      <td>{fine.district || '-'}</td>
+                      <td><span className={`badge badge-${fine.status.toLowerCase()}`}>{fine.status}</span></td>
+                      <td className="actions">
+                        <button className="btn-outline compact" onClick={() => navigate(`/fines/${fine.id}`)}>View</button>
+                        {fine.status === 'PENDING' && <button className="btn-outline compact" onClick={() => navigate(`/fines/${fine.id}/edit`)}>Edit</button>}
+                        {user?.role === 'ADMIN' && <button className="btn-danger compact" onClick={() => remove(fine.id)}>Delete</button>}
+                      </td>
+                    </tr>
+                  ))}
+                  {!data.fines.length && <tr><td colSpan="8" className="empty">No fines found.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="pagination">
+              <button className="btn-outline compact" disabled={filters.page <= 1} onClick={() => setFilters({ ...filters, page: filters.page - 1 })}>Previous</button>
+              <span>Page {filters.page} of {data.pages}</span>
+              <button className="btn-outline compact" disabled={filters.page >= data.pages} onClick={() => setFilters({ ...filters, page: filters.page + 1 })}>Next</button>
             </div>
           </>
         )}

@@ -17,7 +17,10 @@ exports.getAll = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { full_name, email, role, district, phone, password } = req.body;
-    const updates = { full_name, email, role, district, phone };
+    const updates = Object.fromEntries(
+      Object.entries({ full_name, email, role, district, phone })
+        .filter(([, value]) => value !== undefined)
+    );
     if (password) updates.password = await bcrypt.hash(password, 10);
 
     const { data, error } = await supabaseAdmin

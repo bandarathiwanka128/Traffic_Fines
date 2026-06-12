@@ -1,56 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { finesAPI } from '../services/api';
+import { QRCodeSVG } from 'qrcode.react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { finesAPI, paymentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+const money = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
 
 export default function FineDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [fine, setFine] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [reference, setReference] = useState('');
+  const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    finesAPI.getById(id).then((r) => { setFine(r.data); setLoading(false); });
-  }, [id]);
+  const load = () => finesAPI.getById(id).then(({ data }) => setFine(data));
+  useEffect(load, [id]);
 
-  const handlePay = async () => {
-    const updated = await finesAPI.pay(id);
-    setFine(updated.data);
+  if (!fine) return <p>Loading fine...</p>;
+  const paymentUrl = `${window.location.origin}/pay?reference=${encodeURIComponent(fine.fine_reference)}&category=${fine.category_id}`;
+
+  const confirm = async () => {
+    setMessage('');
+    try {
+      await paymentsAPI.confirm({ fine_id: fine.id, transaction_id: reference });
+      setMessage('Payment confirmed and SMS notification queued.');
+      load();
+    } catch (err) {
+      setMessage(err.response?.data?.message || 'Unable to confirm payment');
+    }
   };
-
-  if (loading) return <p>Loading...</p>;
-  if (!fine) return <p>Fine not found</p>;
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 20 }}>
+      <div className="page-heading">
+        <div><h1 className="page-title">Fine {fine.fine_reference}</h1><p className="muted">Issued {new Date(fine.issued_date).toLocaleString()}</p></div>
         <button className="btn-outline" onClick={() => navigate('/fines')}>Back</button>
-        <h1 className="page-title" style={{ margin: 0 }}>Fine Details</h1>
       </div>
-      <div className="card" style={{ maxWidth: 600 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700 }}>{fine.vehiclePlate}</h2>
-          <span className={`badge badge-${fine.status}`}>{fine.status}</span>
+      <div className="detail-grid">
+        <div className="card">
+          <div className="detail-header">
+            <h2>{fine.vehicle_number}</h2>
+            <span className={`badge badge-${fine.status.toLowerCase()}`}>{fine.status}</span>
+          </div>
+          <Detail label="Driver" value={fine.driver_name || '-'} />
+          <Detail label="Licence number" value={fine.driver_license} />
+          <Detail label="Fine category" value={`${fine.category_id} - ${fine.fine_categories?.category_name}`} />
+          <Detail label="Amount" value={money(fine.fine_categories?.amount)} />
+          <Detail label="District" value={fine.district || '-'} />
+          <Detail label="Issued by" value={fine.users?.full_name || '-'} />
+          <Detail label="Officer phone" value={fine.users?.phone || '-'} />
+          {fine.status === 'PENDING' && <button className="btn-outline" onClick={() => navigate(`/fines/${id}/edit`)}>Edit fine</button>}
         </div>
-        <Detail label="Owner" value={fine.ownerName} />
-        <Detail label="Email" value={fine.ownerEmail || '—'} />
-        <Detail label="Violation" value={fine.violation} />
-        <Detail label="Amount" value={`$${fine.amount}`} />
-        <Detail label="Location" value={fine.location} />
-        <Detail label="Fine Date" value={new Date(fine.fineDate).toLocaleDateString()} />
-        <Detail label="Due Date" value={new Date(fine.dueDate).toLocaleDateString()} />
-        {fine.paidAt && <Detail label="Paid At" value={new Date(fine.paidAt).toLocaleDateString()} />}
-        {fine.issuedBy && <Detail label="Issued By" value={fine.issuedBy.name} />}
-        {fine.notes && <Detail label="Notes" value={fine.notes} />}
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-          {fine.status !== 'paid' && (
-            <button className="btn-success" onClick={handlePay}>Mark as Paid</button>
+        <div className="card qr-card">
+          <h2 className="section-title">Driver payment QR</h2>
+          <QRCodeSVG value={paymentUrl} size={210} level="H" />
+          <p className="reference-code">{fine.fine_reference}</p>
+          <p className="muted">Category identifier: {fine.category_id}</p>
+          <button className="btn-outline" onClick={() => navigator.clipboard.writeText(paymentUrl)}>Copy payment link</button>
+          {user?.role === 'ADMIN' && fine.status === 'PENDING' && (
+            <div className="manual-confirm">
+              <label>Bank/counter transaction reference</label>
+              <input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="Optional reference" />
+              <button className="btn-success" onClick={confirm}>Confirm manual payment</button>
+            </div>
           )}
-          {(user?.role === 'admin' || user?.role === 'officer') && (
-            <button className="btn-outline" onClick={() => navigate(`/fines/${id}/edit`)}>Edit</button>
-          )}
+          {message && <p className="notice">{message}</p>}
         </div>
       </div>
     </div>
@@ -58,10 +73,5 @@ export default function FineDetail() {
 }
 
 function Detail({ label, value }) {
-  return (
-    <div style={{ display: 'flex', borderBottom: '1px solid #f0f0f0', padding: '10px 0' }}>
-      <span style={{ width: 120, fontSize: 13, color: '#6b7280', fontWeight: 600, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 14 }}>{value}</span>
-    </div>
-  );
+  return <div className="detail-row"><span>{label}</span><strong>{value}</strong></div>;
 }

@@ -1,52 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { finesAPI } from '../services/api';
+import { categoriesAPI, finesAPI } from '../services/api';
 import './FineForm.css';
 
-const VIOLATIONS = [
-  'Speeding', 'Red Light Violation', 'Illegal Parking', 'No Seatbelt',
-  'Using Phone While Driving', 'No Insurance', 'DUI', 'Reckless Driving',
-  'Wrong Way Driving', 'Expired Registration',
-];
-
-const defaultForm = {
-  vehiclePlate: '', ownerName: '', ownerEmail: '', violation: '',
-  amount: '', location: '', dueDate: '', status: 'unpaid', notes: '',
+const initialForm = {
+  vehicle_number: '', driver_name: '', driver_license: '',
+  category_id: '', district: '', fine_reference: '',
 };
 
 export default function FineForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isEdit = Boolean(id);
-  const [form, setForm] = useState(defaultForm);
+  const [form, setForm] = useState(initialForm);
+  const [categories, setCategories] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isEdit) {
-      finesAPI.getById(id).then((r) => {
-        const f = r.data;
-        setForm({
-          vehiclePlate: f.vehiclePlate, ownerName: f.ownerName, ownerEmail: f.ownerEmail || '',
-          violation: f.violation, amount: f.amount, location: f.location,
-          dueDate: f.dueDate?.slice(0, 10), status: f.status, notes: f.notes || '',
-        });
-      });
+    categoriesAPI.getAll().then(({ data }) => setCategories(data));
+    if (id) {
+      finesAPI.getById(id).then(({ data }) => setForm({
+        vehicle_number: data.vehicle_number,
+        driver_name: data.driver_name || '',
+        driver_license: data.driver_license,
+        category_id: data.category_id,
+        district: data.district || '',
+        fine_reference: data.fine_reference,
+      }));
     }
-  }, [id, isEdit]);
+  }, [id]);
 
-  const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+  const set = (field) => (event) => setForm({ ...form, [field]: event.target.value });
+  const submit = async (event) => {
+    event.preventDefault();
     setLoading(true);
+    setError('');
     try {
-      if (isEdit) await finesAPI.update(id, form);
-      else await finesAPI.create(form);
-      navigate('/fines');
+      const { data } = id
+        ? await finesAPI.update(id, form)
+        : await finesAPI.create(form);
+      navigate(`/fines/${data.id}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save fine');
+      setError(err.response?.data?.message || 'Unable to save fine');
     } finally {
       setLoading(false);
     }
@@ -54,69 +49,39 @@ export default function FineForm() {
 
   return (
     <div>
-      <h1 className="page-title">{isEdit ? 'Edit Fine' : 'Issue New Fine'}</h1>
-      <div className="card">
-        <form onSubmit={handleSubmit} className="fine-form">
+      <h1 className="page-title">{id ? 'Edit traffic fine' : 'Issue traffic fine'}</h1>
+      <div className="card form-card">
+        <form onSubmit={submit} className="fine-form">
           <div className="form-row">
-            <div className="form-group">
-              <label>Vehicle Plate *</label>
-              <input value={form.vehiclePlate} required onChange={set('vehiclePlate')} placeholder="e.g. ABC-1234" />
-            </div>
-            <div className="form-group">
-              <label>Owner Name *</label>
-              <input value={form.ownerName} required onChange={set('ownerName')} />
-            </div>
+            <Field label="Vehicle number *"><input value={form.vehicle_number} required onChange={set('vehicle_number')} placeholder="WP CAB-1234" /></Field>
+            <Field label="Driving licence number *"><input value={form.driver_license} required onChange={set('driver_license')} /></Field>
           </div>
           <div className="form-row">
-            <div className="form-group">
-              <label>Owner Email</label>
-              <input type="email" value={form.ownerEmail} onChange={set('ownerEmail')} />
-            </div>
-            <div className="form-group">
-              <label>Violation *</label>
-              <select value={form.violation} required onChange={set('violation')}>
-                <option value="">Select violation</option>
-                {VIOLATIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
+            <Field label="Driver name"><input value={form.driver_name} onChange={set('driver_name')} /></Field>
+            <Field label="District"><input value={form.district} onChange={set('district')} placeholder="Officer district by default" /></Field>
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Fine Amount ($) *</label>
-              <input type="number" min="1" value={form.amount} required onChange={set('amount')} />
-            </div>
-            <div className="form-group">
-              <label>Due Date *</label>
-              <input type="date" value={form.dueDate} required onChange={set('dueDate')} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Location *</label>
-            <input value={form.location} required onChange={set('location')} placeholder="e.g. Main St & 5th Ave" />
-          </div>
-          {isEdit && (
-            <div className="form-group">
-              <label>Status</label>
-              <select value={form.status} onChange={set('status')}>
-                <option value="unpaid">Unpaid</option>
-                <option value="paid">Paid</option>
-                <option value="disputed">Disputed</option>
-              </select>
-            </div>
-          )}
-          <div className="form-group">
-            <label>Notes</label>
-            <textarea value={form.notes} onChange={set('notes')} rows={3} />
-          </div>
+          <Field label="Fine category *">
+            <select value={form.category_id} required onChange={set('category_id')}>
+              <option value="">Select category</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.id} - {category.category_name} (LKR {Number(category.amount).toLocaleString()})
+                </option>
+              ))}
+            </select>
+          </Field>
+          {!id && <Field label="Reference number (optional)"><input value={form.fine_reference} onChange={set('fine_reference')} placeholder="Automatically generated when empty" /></Field>}
           {error && <p className="error-msg">{error}</p>}
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Saving...' : isEdit ? 'Update Fine' : 'Issue Fine'}
-            </button>
+          <div className="button-row">
+            <button className="btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save and generate QR'}</button>
             <button type="button" className="btn-outline" onClick={() => navigate('/fines')}>Cancel</button>
           </div>
         </form>
       </div>
     </div>
   );
+}
+
+function Field({ label, children }) {
+  return <div className="form-group"><label>{label}</label>{children}</div>;
 }

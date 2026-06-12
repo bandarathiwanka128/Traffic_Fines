@@ -2,67 +2,75 @@ import React, { useEffect, useState } from 'react';
 import { usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const emptyForm = { full_name: '', email: '', password: '', district: '', phone: '', role: 'POLICE' };
+
 export default function Users() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState('');
 
-  const fetchUsers = async () => {
-    const res = await usersAPI.getAll();
-    setUsers(res.data);
-    setLoading(false);
+  const load = () => usersAPI.getAll().then(({ data }) => setUsers(data));
+  useEffect(load, []);
+
+  const create = async (event) => {
+    event.preventDefault();
+    setError('');
+    try {
+      await usersAPI.create(form);
+      setForm(emptyForm);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to create user');
+    }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  const update = async (id, changes) => {
+    await usersAPI.update(id, changes);
+    load();
+  };
 
-  const handleDelete = async (id) => {
-    if (id === currentUser.id) return alert("Can't delete yourself");
-    if (!window.confirm('Delete this user?')) return;
+  const remove = async (id) => {
+    if (id === currentUser.id || !window.confirm('Delete this police user?')) return;
     await usersAPI.delete(id);
-    fetchUsers();
-  };
-
-  const handleRoleChange = async (id, role) => {
-    await usersAPI.update(id, { role });
-    fetchUsers();
+    load();
   };
 
   return (
     <div>
-      <h1 className="page-title">Users</h1>
-      <div className="card">
-        {loading ? <p>Loading...</p> : (
+      <h1 className="page-title">Police user management</h1>
+      <div className="card form-card">
+        <h2 className="section-title">Create account</h2>
+        <form className="user-form" onSubmit={create}>
+          <input required placeholder="Full name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <input required minLength="8" type="password" placeholder="Temporary password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <input placeholder="District" value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} />
+          <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+          <button className="btn-primary">Create police account</button>
+        </form>
+        {error && <p className="error-msg">{error}</p>}
+      </div>
+      <div className="card table-card">
+        <div className="table-scroll">
           <table>
-            <thead>
-              <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr>
-            </thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>District</th><th>Phone</th><th /></tr></thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u._id}>
-                  <td>{u.name}</td>
-                  <td>{u.email}</td>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>{user.full_name}</td><td>{user.email}</td>
                   <td>
-                    <select value={u.role} style={{ width: 'auto', padding: '4px 8px' }}
-                      onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                      disabled={u._id === currentUser.id}>
-                      <option value="citizen">Citizen</option>
-                      <option value="officer">Officer</option>
-                      <option value="admin">Admin</option>
+                    <select value={user.role} disabled={user.id === currentUser.id} onChange={(e) => update(user.id, { role: e.target.value })}>
+                      <option value="POLICE">POLICE</option><option value="ADMIN">ADMIN</option>
                     </select>
                   </td>
-                  <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    <button className="btn-danger" style={{ padding: '4px 12px', fontSize: 12 }}
-                      onClick={() => handleDelete(u._id)}
-                      disabled={u._id === currentUser.id}>
-                      Delete
-                    </button>
-                  </td>
+                  <td>{user.district || '-'}</td><td>{user.phone || '-'}</td>
+                  <td><button className="btn-danger compact" disabled={user.id === currentUser.id} onClick={() => remove(user.id)}>Delete</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
     </div>
   );

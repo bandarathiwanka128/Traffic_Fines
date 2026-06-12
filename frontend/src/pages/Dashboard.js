@@ -1,66 +1,80 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { finesAPI } from '../services/api';
 import './Dashboard.css';
 
+const money = (value) => `LKR ${Number(value || 0).toLocaleString('en-LK', { minimumFractionDigits: 2 })}`;
+
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
-  const [recentFines, setRecentFines] = useState([]);
+  const [recent, setRecent] = useState([]);
 
   useEffect(() => {
-    if (user?.role === 'admin') {
-      finesAPI.getStats().then((r) => setStats(r.data)).catch(() => {});
-    }
-    finesAPI.getAll({ limit: 5 }).then((r) => setRecentFines(r.data.fines)).catch(() => {});
+    if (user?.role === 'ADMIN') finesAPI.getStats().then(({ data }) => setStats(data));
+    finesAPI.getAll({ limit: 5 }).then(({ data }) => setRecent(data.fines));
   }, [user]);
 
   return (
     <div>
-      <h1 className="page-title">Dashboard</h1>
-      <p className="welcome">Welcome back, <strong>{user?.name}</strong></p>
+      <h1 className="page-title">Collection dashboard</h1>
+      <p className="welcome">Welcome, <strong>{user?.full_name}</strong></p>
 
       {stats && (
-        <div className="stats-grid">
-          <StatCard label="Total Fines" value={stats.total} color="#4f46e5" />
-          <StatCard label="Unpaid" value={stats.unpaid} color="#ef4444" />
-          <StatCard label="Paid" value={stats.paid} color="#22c55e" />
-          <StatCard label="Revenue" value={`$${stats.revenue.toLocaleString()}`} color="#f59e0b" />
-        </div>
+        <>
+          <div className="stats-grid">
+            <StatCard label="Total fines" value={stats.total} />
+            <StatCard label="Pending" value={stats.pending} />
+            <StatCard label="Paid" value={stats.paid} />
+            <StatCard label="Total collection" value={money(stats.totalRevenue)} />
+          </div>
+          <div className="report-grid">
+            <Breakdown title="District-wise collections" rows={stats.byDistrict} />
+            <Breakdown title="Fine category collections" rows={stats.byCategory} />
+          </div>
+        </>
       )}
 
-      <div className="card" style={{ marginTop: 24 }}>
-        <h2 className="section-title">Recent Fines</h2>
-        {recentFines.length === 0 ? (
-          <p style={{ color: '#9ca3af', fontSize: 14 }}>No fines found.</p>
-        ) : (
+      <div className="card table-card">
+        <div className="section-heading">
+          <h2 className="section-title">Recent fines</h2>
+          <Link to="/fines">View all</Link>
+        </div>
+        <div className="table-scroll">
           <table>
-            <thead>
-              <tr><th>Plate</th><th>Owner</th><th>Violation</th><th>Amount</th><th>Status</th></tr>
-            </thead>
+            <thead><tr><th>Reference</th><th>Vehicle</th><th>Category</th><th>Amount</th><th>Status</th></tr></thead>
             <tbody>
-              {recentFines.map((f) => (
-                <tr key={f._id}>
-                  <td><strong>{f.vehiclePlate}</strong></td>
-                  <td>{f.ownerName}</td>
-                  <td>{f.violation}</td>
-                  <td>${f.amount}</td>
-                  <td><span className={`badge badge-${f.status}`}>{f.status}</span></td>
+              {recent.map((fine) => (
+                <tr key={fine.id}>
+                  <td><Link className="table-link" to={`/fines/${fine.id}`}>{fine.fine_reference}</Link></td>
+                  <td>{fine.vehicle_number}</td>
+                  <td>{fine.fine_categories?.category_name}</td>
+                  <td>{money(fine.fine_categories?.amount)}</td>
+                  <td><span className={`badge badge-${fine.status.toLowerCase()}`}>{fine.status}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ label, value, color }) {
+function StatCard({ label, value }) {
+  return <div className="stat-card card"><p className="stat-label">{label}</p><p className="stat-value">{value}</p></div>;
+}
+
+function Breakdown({ title, rows = [] }) {
   return (
-    <div className="stat-card card">
-      <p className="stat-label">{label}</p>
-      <p className="stat-value" style={{ color }}>{value}</p>
+    <div className="card">
+      <h2 className="section-title">{title}</h2>
+      <div className="breakdown-list">
+        {rows.length ? rows.map((row) => (
+          <div className="breakdown-row" key={row.name}><span>{row.name}</span><strong>{money(row.amount)}</strong></div>
+        )) : <p className="muted">No paid fines yet.</p>}
+      </div>
     </div>
   );
 }
