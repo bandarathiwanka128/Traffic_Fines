@@ -11,7 +11,7 @@ exports.lookupFine = async (req, res) => {
       .select(`
         id, fine_reference, vehicle_number, driver_name, district, status,
         issued_date, category_id, fine_categories(category_name, amount, description),
-        users(full_name, phone)
+        users(full_name)
       `)
       .ilike('fine_reference', fine_reference.trim())
       .eq('category_id', category_id)
