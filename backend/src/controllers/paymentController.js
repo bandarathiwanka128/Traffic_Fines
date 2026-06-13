@@ -122,6 +122,14 @@ exports.getCheckoutStatus = async (req, res) => {
   try {
     requireStripe();
     const session = await stripe.checkout.sessions.retrieve(req.params.sessionId);
+    if (session.payment_status === 'paid' && session.metadata?.fine_id) {
+      await recordSuccessfulPayment({
+        fineId: Number(session.metadata.fine_id),
+        amount: Number(session.amount_total) / 100,
+        method: 'STRIPE',
+        transactionId: session.payment_intent || session.id,
+      });
+    }
     res.json({
       paid: session.payment_status === 'paid',
       fine_reference: session.metadata?.fine_reference,
@@ -142,6 +150,17 @@ exports.getAll = async (req, res) => {
 };
 
 exports.getByFine = async (req, res) => {
+  if (req.user.role === 'POLICE') {
+    const { data: fine, error: fineError } = await supabaseAdmin
+      .from('traffic_fines')
+      .select('id')
+      .eq('id', req.params.fineId)
+      .eq('police_officer_id', req.user.id)
+      .maybeSingle();
+    if (fineError) return res.status(500).json({ message: fineError.message });
+    if (!fine) return res.status(403).json({ message: 'Access denied' });
+  }
+
   const { data, error } = await supabaseAdmin
     .from('payments').select('*').eq('fine_id', req.params.fineId)
     .order('payment_date', { ascending: false });
@@ -162,7 +181,7 @@ exports.confirmManualPayment = async (req, res) => {
     const payment = await recordSuccessfulPayment({
       fineId: fine.id,
       amount: Number(fine.fine_categories.amount),
-      method: payment_method,
+      method: `${payment_method}:ADMIN:${req.user.id}`,
       transactionId: transaction_id || `MANUAL-${Date.now()}`,
     });
     res.status(201).json(payment);

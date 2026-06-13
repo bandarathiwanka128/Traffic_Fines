@@ -48,6 +48,7 @@ export const usersAPI = {
 
 export const paymentsAPI = {
   confirm: (data) => api.post('/payments/confirm', data),
+  getByFine: (fineId) => api.get(`/payments/fine/${fineId}`),
 };
 
 export const publicAPI = {

@@ -11,10 +11,18 @@ export default function FineDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [fine, setFine] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [reference, setReference] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = () => finesAPI.getById(id).then(({ data }) => setFine(data));
+  const load = async () => {
+    const [{ data: fineData }, { data: paymentData }] = await Promise.all([
+      finesAPI.getById(id),
+      paymentsAPI.getByFine(id),
+    ]);
+    setFine(fineData);
+    setPayments(paymentData);
+  };
   useEffect(load, [id]);
 
   if (!fine) return <p>Loading fine...</p>;
@@ -68,10 +76,44 @@ export default function FineDetail() {
           {message && <p className="notice">{message}</p>}
         </div>
       </div>
+      <div className="card table-card">
+        <h2 className="section-title">Payment history</h2>
+        {payments.length === 0 ? (
+          <p className="muted">
+            No confirmed payment is recorded. A Stripe receipt alone is not enough;
+            check the Stripe webhook delivery if the driver completed payment.
+          </p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Method</th><th>Transaction</th><th>Amount</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td>{new Date(payment.payment_date).toLocaleString()}</td>
+                    <td>{formatMethod(payment.payment_method)}</td>
+                    <td>{payment.transaction_id || '-'}</td>
+                    <td>{money(payment.amount)}</td>
+                    <td><span className="badge badge-paid">{payment.payment_status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function Detail({ label, value }) {
   return <div className="detail-row"><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function formatMethod(method = '') {
+  const match = method.match(/^(.+):ADMIN:(\d+)$/);
+  if (match) return `${match[1]} (confirmed by admin #${match[2]})`;
+  return method || '-';
 }
