@@ -18,8 +18,17 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="page-title">Collection dashboard</h1>
-      <p className="welcome">Welcome, <strong>{user?.full_name}</strong></p>
+      <section className="page-banner">
+        <div>
+          <p className="banner-kicker">Operations overview</p>
+          <h1 className="banner-title">Collection dashboard</h1>
+          <p className="banner-copy">Monitor fines, revenue, and recent activity from one clean command center.</p>
+        </div>
+        <div className="banner-actions">
+          <span className="banner-pill">Welcome, {user?.full_name}</span>
+          <span className="banner-pill">Live monitoring</span>
+        </div>
+      </section>
 
       {stats && (
         <>
@@ -37,8 +46,11 @@ export default function Dashboard() {
       )}
 
       <div className="card table-card">
-        <div className="section-heading">
-          <h2 className="section-title">Recent fines</h2>
+        <div className="table-header">
+          <div>
+            <h2>Recent fines</h2>
+            <p>Latest entries captured by the system.</p>
+          </div>
           <Link to="/fines">View all</Link>
         </div>
         <div className="table-scroll">

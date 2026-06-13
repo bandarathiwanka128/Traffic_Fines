@@ -25,11 +25,17 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-wrapper">
+    <div className="auth-wrapper" style={{ '--auth-bg': "url('/login-bg.jpg')" }}>
       <div className="auth-card card">
-        <div className="government-mark">SRI LANKA POLICE</div>
+        <div className="auth-brand">
+          <img src="/logo.jpg" alt="Logo" className="auth-logo" />
+          <div className="auth-brand-copy">
+            <div className="government-mark">SRI LANKA POLICE</div>
+            <p className="auth-subtitle auth-subtitle-tight">Official traffic fine portal for officers and administrators</p>
+          </div>
+        </div>
         <h1 className="auth-title">Traffic Fine Portal</h1>
-        <p className="auth-subtitle">Authorized officers and administrators</p>
+        <p className="auth-subtitle auth-subtitle-main">Secure access to issue, track, and manage fines with a cleaner workflow.</p>
         <form onSubmit={submit} className="auth-form">
           <div className="form-group">
             <label>Username or email</label>

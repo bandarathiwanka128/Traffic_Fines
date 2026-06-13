@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -23,18 +23,18 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/pay" element={<PayFine />} />
-          <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="fines" element={<FinesList />} />
-            <Route path="fines/new" element={<FineForm />} />
-            <Route path="fines/:id" element={<FineDetail />} />
-            <Route path="fines/:id/edit" element={<FineForm />} />
-            <Route path="users" element={
-              <PrivateRoute roles={['ADMIN']}><Users /></PrivateRoute>
-            } />
+          <Route path="/" element={<Layout />}>
+            <Route path="pay" element={<PayFine />} />
+            <Route path="payment/success" element={<PaymentSuccess />} />
+            <Route element={<PrivateRoute><Outlet /></PrivateRoute>}>
+              <Route index element={<Dashboard />} />
+              <Route path="fines" element={<FinesList />} />
+              <Route path="fines/new" element={<FineForm />} />
+              <Route path="fines/:id" element={<FineDetail />} />
+              <Route path="fines/:id/edit" element={<FineForm />} />
+              <Route path="users" element={<PrivateRoute roles={['ADMIN']}><Users /></PrivateRoute>} />
+            </Route>
           </Route>
           <Route path="*" element={<Navigate to="/pay" replace />} />
         </Routes>

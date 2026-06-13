@@ -30,23 +30,39 @@ export default function FinesList() {
 
   return (
     <div>
-      <div className="page-heading">
-        <div><h1 className="page-title">Traffic fines</h1><p className="muted">{data.total} records</p></div>
-        <button className="btn-primary" onClick={() => navigate('/fines/new')}>Issue new fine</button>
-      </div>
-      <div className="card filters">
-        <input
-          placeholder="Search vehicle number"
-          value={filters.vehicle_number}
-          onChange={(event) => setFilters({ ...filters, vehicle_number: event.target.value, page: 1 })}
-        />
-        <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value, page: 1 })}>
-          <option value="">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="PAID">Paid</option>
-        </select>
+      <section className="page-banner">
+        <div>
+          <p className="banner-kicker">Fine registry</p>
+          <h1 className="banner-title">Traffic fines</h1>
+          <p className="banner-copy">Search and manage issued fines with fast filters, clearer status cues, and a cleaner workflow.</p>
+        </div>
+        <div className="banner-actions">
+          <span className="banner-pill">{data.total} records</span>
+          <button className="btn-primary" onClick={() => navigate('/fines/new')}>Issue new fine</button>
+        </div>
+      </section>
+      <div className="card filters-panel">
+        <div className="filters">
+          <input
+            placeholder="Search vehicle number"
+            value={filters.vehicle_number}
+            onChange={(event) => setFilters({ ...filters, vehicle_number: event.target.value, page: 1 })}
+          />
+          <select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value, page: 1 })}>
+            <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="PAID">Paid</option>
+          </select>
+        </div>
+        <p className="filters-note">Use the vehicle number and status filters to narrow down a long list quickly during roadside checks or back-office review.</p>
       </div>
       <div className="card table-card">
+        <div className="table-header">
+          <div>
+            <h2>All fines</h2>
+            <p>Table view with recent activity and quick actions.</p>
+          </div>
+        </div>
         {loading ? <p>Loading fines...</p> : (
           <>
             <div className="table-scroll">

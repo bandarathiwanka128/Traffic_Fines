@@ -16,7 +16,7 @@ export default function PaymentSuccess() {
   }, [params]);
 
   return (
-    <div className="public-shell success-page">
+    <div className="success-page">
       <div className="card success-card">
         {!result && !error && <p>Verifying payment...</p>}
         {error && <><h1>Verification unavailable</h1><p className="error-msg">{error}</p></>}

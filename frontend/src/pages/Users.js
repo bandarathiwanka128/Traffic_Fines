@@ -38,7 +38,17 @@ export default function Users() {
 
   return (
     <div>
-      <h1 className="page-title">Police user management</h1>
+      <section className="page-banner">
+        <div>
+          <p className="banner-kicker">Administration</p>
+          <h1 className="banner-title">Police user management</h1>
+          <p className="banner-copy">Create officer accounts, assign roles, and keep access clean with a familiar admin workflow.</p>
+        </div>
+        <div className="banner-actions">
+          <span className="banner-pill">{users.length} accounts</span>
+          <span className="banner-pill">Role control</span>
+        </div>
+      </section>
       <div className="card form-card">
         <h2 className="section-title">Create account</h2>
         <form className="user-form" onSubmit={create}>

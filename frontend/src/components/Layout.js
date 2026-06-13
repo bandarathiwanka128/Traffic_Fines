@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import './Layout.css';
 
@@ -34,14 +34,28 @@ export default function Layout() {
               Police users
             </NavLink>
           )}
-          <a className="nav-item" href="/pay" target="_blank" rel="noreferrer">Public payment portal</a>
+          <NavLink to="/pay" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            Public payment portal
+          </NavLink>
         </nav>
         <div className="sidebar-footer">
-          <div className="user-info">
-            <span className="user-name">{user?.full_name}</span>
-            <span className="user-role">{user?.role} {user?.district ? `- ${user.district}` : ''}</span>
-          </div>
-          <button className="btn-danger logout-btn" onClick={signOut}>Sign out</button>
+          {user ? (
+            <>
+              <div className="user-info">
+                <span className="user-name">{user.full_name}</span>
+                <span className="user-role">{user.role} {user.district ? `- ${user.district}` : ''}</span>
+              </div>
+              <button className="btn-danger logout-btn" onClick={signOut}>Sign out</button>
+            </>
+          ) : (
+            <>
+              <div className="user-info">
+                <span className="user-name">Public payment access</span>
+                <span className="user-role">Search and settle a traffic fine</span>
+              </div>
+              <Link className="btn-outline compact logout-btn" to="/login">Officer login</Link>
+            </>
+          )}
         </div>
       </aside>
       <main className="main-content"><Outlet /></main>
