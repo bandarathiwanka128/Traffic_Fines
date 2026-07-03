@@ -55,7 +55,13 @@ export default function PayFine() {
   };
 
   return (
-    <div>
+    <div className="pay-page">
+      <div className="hero-aurora" aria-hidden="true">
+        <span className="aurora-orb orb-1" />
+        <span className="aurora-orb orb-2" />
+        <span className="aurora-orb orb-3" />
+        <span className="aurora-grid" />
+      </div>
       <section className="public-intro">
         <p className="eyebrow">Secure online service</p>
         <h1>Pay your traffic fine online</h1>

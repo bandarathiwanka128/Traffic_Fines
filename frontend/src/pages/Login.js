@@ -26,6 +26,11 @@ export default function Login() {
 
   return (
     <div className="auth-wrapper" style={{ '--auth-bg': "url('/login-bg.jpg')" }}>
+      <div className="auth-bg-layer" aria-hidden="true" />
+      <div className="auth-orbs" aria-hidden="true">
+        <span className="auth-orb auth-orb-1" />
+        <span className="auth-orb auth-orb-2" />
+      </div>
       <div className="auth-card card">
         <div className="auth-brand">
           <img src="/logo.jpg" alt="Logo" className="auth-logo" />

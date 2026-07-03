@@ -19,6 +19,31 @@
 .nav-item { border-radius: 14px; color: #c2d0df; font-size: 14px; padding: 12px 13px; transition: background-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease; }
 .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.08); color: #fff; transform: translateX(2px); }
 .nav-item.active { box-shadow: inset 3px 0 0 #e6a817; }
+.nav-item-pay {
+  background: linear-gradient(135deg, rgba(230, 168, 23, 0.16), rgba(10, 94, 168, 0.16));
+  border: 1px solid rgba(230, 168, 23, 0.35);
+  color: #fff;
+  font-weight: 700;
+  margin-top: 6px;
+  position: relative;
+  overflow: hidden;
+}
+.nav-item-pay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.28) 50%, transparent 100%);
+  transform: translateX(-120%);
+  animation: paySheen 3.4s ease-in-out infinite;
+}
+.nav-item-pay:hover {
+  background: linear-gradient(135deg, rgba(230, 168, 23, 0.28), rgba(10, 94, 168, 0.28));
+  transform: translateX(2px);
+}
+@keyframes paySheen {
+  0% { transform: translateX(-120%); }
+  55%, 100% { transform: translateX(120%); }
+}
 .sidebar-footer { border-top: 1px solid rgba(255, 255, 255, .08); padding: 17px; }
 .user-info { display: flex; flex-direction: column; margin-bottom: 12px; }
 .user-name { font-size: 14px; font-weight: 700; }
