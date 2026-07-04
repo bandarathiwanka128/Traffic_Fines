@@ -8,6 +8,7 @@ import FinesList from './pages/FinesList';
 import FineForm from './pages/FineForm';
 import FineDetail from './pages/FineDetail';
 import Users from './pages/Users';
+import Categories from './pages/Categories';
 import PayFine from './pages/PayFine';
 import PaymentSuccess from './pages/PaymentSuccess';
 
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="fines/:id" element={<FineDetail />} />
               <Route path="fines/:id/edit" element={<FineForm />} />
               <Route path="users" element={<PrivateRoute roles={['ADMIN']}><Users /></PrivateRoute>} />
+              <Route path="categories" element={<PrivateRoute roles={['ADMIN']}><Categories /></PrivateRoute>} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/pay" replace />} />

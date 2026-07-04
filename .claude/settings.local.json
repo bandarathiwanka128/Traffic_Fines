@@ -3,7 +3,8 @@
     "allow": [
       "PowerShell($proc = Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess; if \\($proc\\) { Stop-Process -Id $proc -Force; Write-Host \"Killed PID $proc\" } else { Write-Host \"Nothing on 5000\" })",
       "Bash(npx eslint *)",
-      "Bash(npx react-scripts *)"
+      "Bash(npx react-scripts *)",
+      "Bash(GENERATE_SOURCEMAP=false TERSER_PARALLEL=false NODE_OPTIONS=--max-old-space-size=4096 CI=true npx react-scripts build)"
     ]
   }
 }

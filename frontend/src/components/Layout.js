@@ -32,9 +32,14 @@ export default function Layout() {
                 Issue fine
               </NavLink>
               {user.role === 'ADMIN' && (
-                <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                  Police users
-                </NavLink>
+                <>
+                  <NavLink to="/categories" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    Fine categories
+                  </NavLink>
+                  <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                    Police users
+                  </NavLink>
+                </>
               )}
             </>
           )}
